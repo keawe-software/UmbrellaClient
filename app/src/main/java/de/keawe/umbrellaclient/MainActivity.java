@@ -1,6 +1,7 @@
 package de.keawe.umbrellaclient;
 
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -13,35 +14,25 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import com.android.volley.AuthFailureError;
-import com.android.volley.DefaultRetryPolicy;
-import com.android.volley.Request;
-import com.android.volley.RequestQueue;
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
-import com.android.volley.toolbox.HurlStack;
-import com.android.volley.toolbox.StringRequest;
-import com.android.volley.toolbox.Volley;
-
-import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.work.ExistingPeriodicWorkPolicy;
+import androidx.work.PeriodicWorkRequest;
+import androidx.work.WorkInfo;
+import androidx.work.WorkManager;
 
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements LoginListener {
     private static final String TAG = "MainActivity";
-    private static final String CREDENTIALS = "credentials";
-    private static final String URL = "url";
-    private static final String PASS = "pass";
-    private static final String USER = "user";
+    public static final String CREDENTIALS = "credentials";
 
     private Handler handler = new Handler();
     private Button btn;
+    private ProgressDialog dialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,22 +47,32 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        final Button serviceButton = findViewById(R.id.service_btn);
+        serviceButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (serviceRunning()){
+                    stopService();
+                } else {
+                    startService();
+                }
+            }
+        });
+
         SharedPreferences prefs = getSharedPreferences(CREDENTIALS, MODE_PRIVATE);
         if (prefs != null){
             EditText urlInput = findViewById(R.id.url);
-            urlInput.setText(prefs.getString(URL,getString(R.string.url_example)));
+            urlInput.setText(prefs.getString(UmbrellaLogin.URL,getString(R.string.url_example)));
 
             EditText userInput = findViewById(R.id.username);
-            userInput.setText(prefs.getString(USER,null));
+            userInput.setText(prefs.getString(UmbrellaLogin.USER,null));
 
             EditText passInput = findViewById(R.id.password);
-            passInput.setText(prefs.getString(PASS,null));
+            passInput.setText(prefs.getString(UmbrellaLogin.PASS,null));
         }
 
         Spinner intervalSelector = findViewById(R.id.interval);
         ArrayList<String> options = new ArrayList<String>();
-        options.add(getString(R.string.check5));
-        options.add(getString(R.string.check10));
         options.add(getString(R.string.check15));
         options.add(getString(R.string.check20));
         options.add(getString(R.string.check30));
@@ -84,61 +85,46 @@ public class MainActivity extends AppCompatActivity {
         intervalSelector.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_item,options));
     }
 
-    private void connectionTest(final String urlString, final String username, final String password) {
-        final ProgressDialog dialog = new ProgressDialog(MainActivity.this);
-        dialog.setMessage(getString(R.string.trying_to_connect));
-        dialog.setIndeterminate(true);
-        dialog.setCancelable(false);
-        dialog.show();
-        RequestQueue queue = Volley.newRequestQueue(MainActivity.this,new HurlStack(){
-            @Override
-            protected HttpURLConnection createConnection(URL url) throws IOException {
-                HttpURLConnection connection = super.createConnection(url);
-                connection.setInstanceFollowRedirects(false);
-                return connection;
-            }
-        });
-        StringRequest request = new StringRequest(Request.Method.POST, urlString+"/user/login", new Response.Listener<String>() {
-            @Override
-            public void onResponse(String response) {
-                dialog.cancel();
-            }
-        }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                dialog.cancel();
-            }
-        }) {
-
-            @Override
-            public void deliverError(VolleyError error) {
-                super.deliverError(error);
-                String token = error.networkResponse.headers.get("Token");
-                if (token == null){
-                    loginFailed();
-                } else {
-                    loginSuccess(urlString,username,password,token);
-                }
-                btn.setEnabled(true);
-                dialog.cancel();
-            }
-
-            @Override
-            protected Map<String, String> getParams() throws AuthFailureError {
-                Map<String, String> params = new HashMap<>();
-                params.put("username",username);
-                params.put("pass",password);
-                return params;
-            }
-        };
-        request.setRetryPolicy(new DefaultRetryPolicy(12000,0,DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
-        queue.add(request);
+    @Override
+    protected void onResume() {
+        super.onResume();
+        checkService();
     }
 
-    private void loginFailed() {
-        TextView tv = findViewById(R.id.status);
-        tv.setText(R.string.login_failed);
-        fadeBackground(tv,255,0,0);
+    private void checkService() {
+        final Button serviceButton = findViewById(R.id.service_btn);
+        if (serviceRunning()){
+            serviceButton.setText(R.string.disable);
+        } else serviceButton.setText(R.string.enable);
+    }
+
+    private void stopService() {
+        WorkManager.getInstance(this).cancelAllWork();
+        checkService();
+    }
+
+    private boolean serviceRunning() {
+        try {
+            List<WorkInfo> list = WorkManager.getInstance(this).getWorkInfosForUniqueWork(MessageChecker.TAG).get();
+            if (list.size()<1) return false;
+            Log.d(TAG,"list: "+list);
+            boolean state = false;
+            for (WorkInfo wi: list) {
+                if (wi.getState().equals(WorkInfo.State.ENQUEUED)) state = true;
+            }
+            return state;
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    private void startService() {
+        PeriodicWorkRequest workRequest = new PeriodicWorkRequest.Builder(MessageChecker.class,15, TimeUnit.MINUTES).build();
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(MessageChecker.TAG, ExistingPeriodicWorkPolicy.REPLACE,workRequest);
+        checkService();
     }
 
     private void fadeBackground(final View tv, final int r, final int g, final int b) {
@@ -157,30 +143,11 @@ public class MainActivity extends AppCompatActivity {
         handler.postDelayed(runnable,10);
     }
 
-    private void loginSuccess(String url, String username, String password, String token) {
-        TextView tv = findViewById(R.id.status);
-        tv.setText(R.string.logged_in);
-        findViewById(R.id.interval_legend).setVisibility(View.VISIBLE);
-        findViewById(R.id.interval).setVisibility(View.VISIBLE);
-        findViewById(R.id.setup_btn).setVisibility(View.VISIBLE);
-
-        fadeBackground(tv,0,255,0);
-        storeCredentials(url,username,password);
-    }
-
-    private void storeCredentials(String url, String username, String password) {
-        SharedPreferences.Editor credentials = getSharedPreferences(CREDENTIALS, MODE_PRIVATE).edit();
-        credentials.putString(URL,url);
-        credentials.putString(USER,username);
-        credentials.putString(PASS,password);
-        credentials.commit();
-    }
-
     private void testConnection() {
         btn.setEnabled(false);
         findViewById(R.id.interval_legend).setVisibility(View.INVISIBLE);
         findViewById(R.id.interval).setVisibility(View.INVISIBLE);
-        findViewById(R.id.setup_btn).setVisibility(View.INVISIBLE);
+        findViewById(R.id.service_btn).setVisibility(View.INVISIBLE);
 
         EditText urlInput = findViewById(R.id.url);
         final String url = urlInput.getText().toString().trim();
@@ -191,8 +158,54 @@ public class MainActivity extends AppCompatActivity {
         EditText passInput = findViewById(R.id.password);
         final String password = passInput.getText().toString().trim();
 
-        connectionTest(url,username,password);
+        UmbrellaLogin login = new UmbrellaLogin(url, username, password);
+        login.doLogin(this);
 
+    }
 
+    @Override
+    public void started() {
+        dialog = new ProgressDialog(MainActivity.this);
+        dialog.setMessage(getString(R.string.trying_to_connect));
+        dialog.setIndeterminate(true);
+        dialog.setCancelable(false);
+        dialog.show();
+    }
+
+    @Override
+    public Context context() {
+        return this;
+    }
+
+    @Override
+    public void onResponse(String response) {
+        Log.d(TAG,"Response: "+response);
+    }
+
+    @Override
+    public void onError() {
+        Log.d(TAG,"onError");
+    }
+
+    @Override
+    public void onLoginFailed() {
+        TextView tv = findViewById(R.id.status);
+        tv.setText(R.string.login_failed);
+        btn.setEnabled(true);
+        if (dialog!=null) dialog.cancel();
+        fadeBackground(tv,255,0,0);
+    }
+
+    @Override
+    public void onTokenReceived(UmbrellaLogin login) {
+        if (dialog!=null) dialog.cancel();
+        TextView tv = findViewById(R.id.status);
+        tv.setText(R.string.logged_in);
+        findViewById(R.id.interval_legend).setVisibility(View.VISIBLE);
+        findViewById(R.id.interval).setVisibility(View.VISIBLE);
+        findViewById(R.id.service_btn).setVisibility(View.VISIBLE);
+        btn.setEnabled(true);
+        fadeBackground(tv,0,255,0);
+        login.storeCredentials(getSharedPreferences(CREDENTIALS, MODE_PRIVATE).edit());
     }
 }
