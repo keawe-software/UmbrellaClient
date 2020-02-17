@@ -11,4 +11,18 @@
     <string name="setup">set up</string>
     <string name="login_failed">login failed!</string>
     <string name="logged_in">logged in!</string>
+    <string name="check5">check every 5 minutes</string>
+    <string name="check10">check every 10 minutes</string>
+    <string name="check15">check every 15 minutes</string>
+    <string name="check20">check every 20 minutes</string>
+    <string name="check30">check every 30 minutes</string>
+    <string name="check_hourly">check every hour</string>
+    <string name="check2">check every 2 hours</string>
+    <string name="check4">check every 4 hours</string>
+    <string name="check_twice_per_day">check every 12 hours</string>
+    <string name="check_daily">check once per day</string>
+    <string name="test_connection">test connection</string>
+    <string name="interval_legend">Select how often Umbrella shall be checked for new messages:</string>
+    <string name="save_settings">save settings</string>
+    <string name="trying_to_connect">trying to login...</string>
 </resources>

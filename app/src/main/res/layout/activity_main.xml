@@ -41,7 +41,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/url"
-        android:padding="10dp"
+        android:padding="20dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textView2" />
 
@@ -59,7 +59,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/username"
-        android:padding="10dp"
+        android:padding="20dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/url_legend" />
 
@@ -76,7 +76,7 @@
         android:id="@+id/password_legend"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:padding="10dp"
+        android:padding="20dp"
         android:text="@string/password"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/username_legend" />
@@ -92,13 +92,42 @@
         app:layout_constraintBaseline_toBaselineOf="@id/password_legend" />
 
     <Button
-        android:id="@+id/setup_btn"
+        android:id="@+id/test_btn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/setup"
+        android:text="@string/test_connection"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/password" />
+
+    <TextView
+        android:id="@+id/interval_legend"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/interval_legend"
+        android:padding="20dp"
+        android:visibility="invisible"
+        app:layout_constraintTop_toBottomOf="@+id/test_btn" />
+
+    <Spinner
+        android:id="@+id/interval"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@+id/interval_legend"
+        android:padding="10dp"
+        android:visibility="invisible"
+        tools:layout_editor_absoluteX="28dp" />
+
+    <Button
+        android:id="@+id/setup_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/save_settings"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:visibility="invisible"
+        app:layout_constraintTop_toBottomOf="@+id/interval" />
+
 
     <TextView
         android:id="@+id/status"
@@ -107,6 +136,5 @@
         android:gravity="center"
         app:layout_constraintBottom_toBottomOf="parent"
         tools:layout_editor_absoluteX="211dp" />
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>
