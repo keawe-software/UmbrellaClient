@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="explanation">This app will notify you of messages from Umbrella waiting for you.</string>
+    <string name="credentials">Enter your login credentials below to enable notifications:</string>
+    <string name="url">Umbrella-Url</string>
+    <string name="url_example">https://umbrella.example.com</string>
+    <string name="username">Username:</string>
+    <string name="enter_username">enter your username</string>
+    <string name="password">Password:</string>
+    <string name="enter_password">enter your password</string>
+    <string name="setup">set up</string>
+    <string name="login_failed">login failed!</string>
+    <string name="logged_in">logged in!</string>
+</resources>
