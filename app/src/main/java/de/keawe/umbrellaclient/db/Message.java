@@ -23,7 +23,7 @@ public class Message implements Serializable {
     private final int id;
     private final int author_id;
     private final String author;
-    private final String content;
+    private String content;
     private final String subject;
     private final long time;
     private static SimpleDateFormat df = null;
@@ -79,7 +79,8 @@ public class Message implements Serializable {
     }
 
     public String content(){
-        return content;
+        String regex = "([\n ])(https?://)(\\S*)";
+        return content.replaceAll(regex,"$1[$3]($2$3)");
     }
 
     public View view(final MainActivity activity) {

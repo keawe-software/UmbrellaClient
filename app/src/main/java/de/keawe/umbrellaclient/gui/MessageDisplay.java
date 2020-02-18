@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import de.keawe.umbrellaclient.R;
 import de.keawe.umbrellaclient.db.Message;
 import de.keawe.umbrellaclient.db.MessageDB;
+import us.feras.mdv.MarkdownView;
 
 public class MessageDisplay extends AppCompatActivity {
     private static final String TAG = "MessageDisplay";
@@ -36,7 +37,9 @@ public class MessageDisplay extends AppCompatActivity {
         ((TextView)findViewById(R.id.author)).setText(msg.author());
         ((TextView)findViewById(R.id.date)).setText(msg.timeString());
         ((TextView)findViewById(R.id.subject)).setText(msg.subject());
-        ((TextView)findViewById(R.id.content)).setText(msg.content());
+        MarkdownView content = findViewById(R.id.content);
+        Log.d(TAG,"displaying "+msg.content());
+        content.loadMarkdown(msg.content());
 
     }
 }

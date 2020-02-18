@@ -1,8 +1,11 @@
 package de.keawe.umbrellaclient;
 
+import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.util.Log;
 
@@ -79,6 +82,7 @@ public class MessageChecker extends Worker implements LoginListener {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel("umbrella","Umbrella", NotificationManager.IMPORTANCE_DEFAULT);
             channel.setDescription("Umbrella Messages");
+
             man.createNotificationChannel(channel);
             nb = new NotificationCompat.Builder(context,channel.getId());
         } else {
@@ -88,10 +92,16 @@ public class MessageChecker extends Worker implements LoginListener {
         nb.setSmallIcon(R.drawable.umbrella100px);
         nb.setContentTitle(msg.subject());
         nb.setContentText(context.getString(R.string.tap_to_display));
-        nb.setWhen(msg.time()*1000);
+        nb.setContentIntent(PendingIntent.getActivity(context,0,new Intent(context,MainActivity.class),PendingIntent.FLAG_UPDATE_CURRENT));
         nb.setAutoCancel(true);
+        nb.setWhen(msg.time()*1000);
+        nb.setOngoing(false);
 
-        man.notify((int) msg.id(),nb.build());
+
+        Notification notification = nb.build();
+
+
+        man.notify((int) msg.id(),notification);
     }
 
     @Override

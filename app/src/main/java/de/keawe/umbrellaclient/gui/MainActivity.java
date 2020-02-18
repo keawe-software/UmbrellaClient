@@ -1,5 +1,6 @@
 package de.keawe.umbrellaclient.gui;
 
+import android.app.NotificationManager;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
@@ -15,7 +16,7 @@ import de.keawe.umbrellaclient.db.Message;
 import de.keawe.umbrellaclient.db.MessageDB;
 
 public class MainActivity extends AppCompatActivity {
-    private static final String TAG = "MainActivity";
+    public static final String TAG = "MainActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,6 +49,9 @@ public class MainActivity extends AppCompatActivity {
         for (Message msg : messages){
             msgList.addView(msg.view(this));
         }
+
+        NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        nm.cancelAll();
     }
 
     public void showMessage(Message message) {
