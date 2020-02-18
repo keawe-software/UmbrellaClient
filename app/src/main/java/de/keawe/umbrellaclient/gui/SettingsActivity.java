@@ -1,4 +1,4 @@
-package de.keawe.umbrellaclient;
+package de.keawe.umbrellaclient.gui;
 
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -24,10 +24,15 @@ import androidx.work.ExistingPeriodicWorkPolicy;
 import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkInfo;
 import androidx.work.WorkManager;
+import de.keawe.umbrellaclient.LoginListener;
+import de.keawe.umbrellaclient.MessageChecker;
+import de.keawe.umbrellaclient.R;
+import de.keawe.umbrellaclient.UmbrellaLogin;
+import de.keawe.umbrellaclient.db.MessageDB;
 
 
-public class MainActivity extends AppCompatActivity implements LoginListener {
-    private static final String TAG = "MainActivity";
+public class SettingsActivity extends AppCompatActivity implements LoginListener {
+    private static final String TAG = "SettingsActivity";
     public static final String CREDENTIALS = "credentials";
 
     private Handler handler = new Handler();
@@ -37,7 +42,7 @@ public class MainActivity extends AppCompatActivity implements LoginListener {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_settings);
 
         btn = findViewById(R.id.test_btn);
         btn.setOnClickListener(new View.OnClickListener() {
@@ -95,6 +100,7 @@ public class MainActivity extends AppCompatActivity implements LoginListener {
         final Button serviceButton = findViewById(R.id.service_btn);
         if (serviceRunning()){
             serviceButton.setText(R.string.disable);
+            serviceButton.setVisibility(View.VISIBLE);
         } else serviceButton.setText(R.string.enable);
     }
 
@@ -165,7 +171,7 @@ public class MainActivity extends AppCompatActivity implements LoginListener {
 
     @Override
     public void started() {
-        dialog = new ProgressDialog(MainActivity.this);
+        dialog = new ProgressDialog(SettingsActivity.this);
         dialog.setMessage(getString(R.string.trying_to_connect));
         dialog.setIndeterminate(true);
         dialog.setCancelable(false);

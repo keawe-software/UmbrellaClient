@@ -2,7 +2,7 @@ package de.keawe.umbrellaclient;
 
 import android.content.Context;
 
-interface LoginListener {
+public interface LoginListener {
     void started();
 
     Context context();

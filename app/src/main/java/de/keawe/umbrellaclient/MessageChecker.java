@@ -1,6 +1,5 @@
 package de.keawe.umbrellaclient;
 
-import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
@@ -9,12 +8,15 @@ import android.util.Log;
 
 import org.json.JSONArray;
 import org.json.JSONException;
-import org.json.JSONObject;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
+import de.keawe.umbrellaclient.db.Message;
+import de.keawe.umbrellaclient.db.MessageDB;
+import de.keawe.umbrellaclient.gui.MainActivity;
+import de.keawe.umbrellaclient.gui.SettingsActivity;
 
 public class MessageChecker extends Worker implements LoginListener {
     public static final String TAG = "MessageChecker";
@@ -23,7 +25,7 @@ public class MessageChecker extends Worker implements LoginListener {
     public MessageChecker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
         super(context, workerParams);
         this.context = context;
-
+        new MessageDB(context);
     }
 
     @NonNull
@@ -31,7 +33,7 @@ public class MessageChecker extends Worker implements LoginListener {
     public Result doWork() {
         Log.d(TAG,"doWork called");
 
-        SharedPreferences credentials = context.getSharedPreferences(MainActivity.CREDENTIALS, Context.MODE_PRIVATE);
+        SharedPreferences credentials = context.getSharedPreferences(SettingsActivity.CREDENTIALS, Context.MODE_PRIVATE);
         String url = credentials.getString(UmbrellaLogin.URL,null);
         String user = credentials.getString(UmbrellaLogin.USER,null);
         String pass = credentials.getString(UmbrellaLogin.PASS,null);
@@ -56,25 +58,27 @@ public class MessageChecker extends Worker implements LoginListener {
     public void onResponse(String response) {
         if (response.trim().startsWith("[{")) try {
             JSONArray arr = new JSONArray(response);
-            for (int i = 0; i<arr.length(); i++) notifyMessage(arr.getJSONObject(i));
+            for (int i = 0; i<arr.length(); i++) {
+                Message msg = new Message(arr.getJSONObject(i)).store();
+                if (msg != null){
+                    notifyMessage(msg);
+                }
+
+
+            }
         } catch (JSONException e) {
             e.printStackTrace();
         }
     }
 
-    private void notifyMessage(JSONObject msg) throws JSONException {
-        Log.d(TAG,"new message");
-        int id = msg.getInt("message_id");
-        long time = msg.getLong("timestamp")*1000;
-        Log.d(TAG,"id: "+id);
-
+    private void notifyMessage(Message msg) throws JSONException {
         NotificationManager man = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 
         NotificationCompat.Builder nb;
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel("umbrella","Umbrella", NotificationManager.IMPORTANCE_DEFAULT);
-            channel.setDescription("This is Channel 1");
+            channel.setDescription("Umbrella Messages");
             man.createNotificationChannel(channel);
             nb = new NotificationCompat.Builder(context,channel.getId());
         } else {
@@ -82,12 +86,12 @@ public class MessageChecker extends Worker implements LoginListener {
         }
 
         nb.setSmallIcon(R.drawable.umbrella100px);
-        nb.setContentTitle(msg.getString("subject"));
+        nb.setContentTitle(msg.subject());
         nb.setContentText(context.getString(R.string.tap_to_display));
-        nb.setWhen(time);
+        nb.setWhen(msg.time()*1000);
         nb.setAutoCancel(true);
 
-        man.notify(id,nb.build());
+        man.notify((int) msg.id(),nb.build());
     }
 
     @Override
@@ -102,6 +106,8 @@ public class MessageChecker extends Worker implements LoginListener {
     @Override
     public void onTokenReceived(UmbrellaLogin login) {
         Log.d(TAG,"token: "+login.token());
-        login.get("/user/json?messages=WAITING",this);
+        Message lastMessage = MessageDB.lastMessage();
+        long id = lastMessage == null ? -1 : lastMessage.id();
+        login.get("/user/json?messages="+id,this);
     }
 }
