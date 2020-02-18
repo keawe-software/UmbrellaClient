@@ -28,7 +28,6 @@ import de.keawe.umbrellaclient.LoginListener;
 import de.keawe.umbrellaclient.MessageChecker;
 import de.keawe.umbrellaclient.R;
 import de.keawe.umbrellaclient.UmbrellaLogin;
-import de.keawe.umbrellaclient.db.MessageDB;
 
 
 public class SettingsActivity extends AppCompatActivity implements LoginListener {
@@ -184,7 +183,7 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
     }
 
     @Override
-    public void onResponse(String response) {
+    public void onResponse(String response, String token) {
         Log.d(TAG,"Response: "+response);
     }
 

@@ -20,6 +20,8 @@ import de.keawe.umbrellaclient.gui.MainActivity;
 
 public class Message implements Serializable {
     public static final String TAG = "Message";
+    private static final String LINKS = "([\n ])(https?://)(\\S*)";
+    private static final String LINK_REPLACE = "$1[$3]($2$3)";
     private final int id;
     private final int author_id;
     private final String author;
@@ -37,7 +39,7 @@ public class Message implements Serializable {
         this.time = time;
     }
 
-    public Message(JSONObject json) throws JSONException {
+    public Message(JSONObject json,String token) throws JSONException {
         this(
                 json.getInt("message_id"),
                 json.getJSONObject("from").getString("login"),
@@ -79,8 +81,7 @@ public class Message implements Serializable {
     }
 
     public String content(){
-        String regex = "([\n ])(https?://)(\\S*)";
-        return content.replaceAll(regex,"$1[$3]($2$3)");
+        return content.replaceAll(LINKS,LINK_REPLACE);
     }
 
     public View view(final MainActivity activity) {

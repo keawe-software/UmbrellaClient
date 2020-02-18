@@ -1,8 +1,6 @@
 package de.keawe.umbrellaclient;
 
-import android.app.ProgressDialog;
 import android.content.SharedPreferences;
-import android.util.Log;
 
 import com.android.volley.AuthFailureError;
 import com.android.volley.DefaultRetryPolicy;
@@ -53,7 +51,7 @@ public class UmbrellaLogin {
         StringRequest request = new StringRequest(Request.Method.POST, url+"/user/login", new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
-                listener.onResponse(response);
+                listener.onResponse(response, token);
             }
         }, new Response.ErrorListener() {
             @Override
@@ -100,11 +98,10 @@ public class UmbrellaLogin {
         RequestQueue queue = Volley.newRequestQueue(listener.context());
         String glue = path.contains("?") ? "&" : "?";
         String full=url+path+glue+"token="+token;
-        Log.d(TAG,"get("+full+")");
         StringRequest request = new StringRequest(Request.Method.GET, full, new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
-                listener.onResponse(response);
+                listener.onResponse(response,token);
             }
         }, new Response.ErrorListener() {
             @Override

@@ -58,11 +58,11 @@ public class MessageChecker extends Worker implements LoginListener {
     }
 
     @Override
-    public void onResponse(String response) {
+    public void onResponse(String response, String token) {
         if (response.trim().startsWith("[{")) try {
             JSONArray arr = new JSONArray(response);
             for (int i = 0; i<arr.length(); i++) {
-                Message msg = new Message(arr.getJSONObject(i)).store();
+                Message msg = new Message(arr.getJSONObject(i),token).store();
                 if (msg != null){
                     notifyMessage(msg);
                 }
@@ -115,7 +115,6 @@ public class MessageChecker extends Worker implements LoginListener {
 
     @Override
     public void onTokenReceived(UmbrellaLogin login) {
-        Log.d(TAG,"token: "+login.token());
         Message lastMessage = MessageDB.lastMessage();
         long id = lastMessage == null ? -1 : lastMessage.id();
         login.get("/user/json?messages="+id,this);

@@ -1,20 +1,14 @@
 package de.keawe.umbrellaclient.gui;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.View;
-import android.widget.Button;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import java.io.Serializable;
-import java.util.List;
 
 import androidx.appcompat.app.AppCompatActivity;
 import de.keawe.umbrellaclient.R;
 import de.keawe.umbrellaclient.db.Message;
-import de.keawe.umbrellaclient.db.MessageDB;
 import us.feras.mdv.MarkdownView;
 
 public class MessageDisplay extends AppCompatActivity {
@@ -40,6 +34,5 @@ public class MessageDisplay extends AppCompatActivity {
         MarkdownView content = findViewById(R.id.content);
         Log.d(TAG,"displaying "+msg.content());
         content.loadMarkdown(msg.content());
-
     }
 }

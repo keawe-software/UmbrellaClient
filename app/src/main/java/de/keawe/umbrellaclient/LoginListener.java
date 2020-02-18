@@ -7,7 +7,7 @@ public interface LoginListener {
 
     Context context();
 
-    void onResponse(String response);
+    void onResponse(String response, String token);
 
     void onError();
 
