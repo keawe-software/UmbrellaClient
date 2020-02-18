@@ -58,11 +58,11 @@ public class MessageChecker extends Worker implements LoginListener {
     }
 
     @Override
-    public void onResponse(String response, String token) {
+    public void onResponse(String response) {
         if (response.trim().startsWith("[{")) try {
             JSONArray arr = new JSONArray(response);
             for (int i = 0; i<arr.length(); i++) {
-                Message msg = new Message(arr.getJSONObject(i),token).store();
+                Message msg = new Message(arr.getJSONObject(i)).store();
                 if (msg != null){
                     notifyMessage(msg);
                 }

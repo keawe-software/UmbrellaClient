@@ -1,17 +1,19 @@
 package de.keawe.umbrellaclient.gui;
 
 import android.app.NotificationManager;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
 import android.widget.LinearLayout;
 
 import java.util.List;
 
 import androidx.appcompat.app.AppCompatActivity;
 import de.keawe.umbrellaclient.R;
+import de.keawe.umbrellaclient.UmbrellaLogin;
 import de.keawe.umbrellaclient.db.Message;
 import de.keawe.umbrellaclient.db.MessageDB;
 
@@ -25,13 +27,29 @@ public class MainActivity extends AppCompatActivity {
 
         new MessageDB(this);
 
-        Button settingsBtn = findViewById(R.id.settings_btn);
-        settingsBtn.setOnClickListener(new View.OnClickListener() {
+        findViewById(R.id.settings_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 openSettings();
             }
         });
+
+        findViewById(R.id.login_btn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                login();
+            }
+        });
+    }
+
+    private void login() {
+        SharedPreferences credentials = getSharedPreferences(SettingsActivity.CREDENTIALS, Context.MODE_PRIVATE);
+        String url = credentials.getString(UmbrellaLogin.URL,null);
+        String user = credentials.getString(UmbrellaLogin.USER,null);
+        String pass = credentials.getString(UmbrellaLogin.PASS,null);
+
+        UmbrellaLogin login = new UmbrellaLogin(url,user,pass);
+        login.openBrowser(this);
     }
 
     private void openSettings() {
@@ -42,8 +60,15 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+
+        SharedPreferences credentials = getSharedPreferences(SettingsActivity.CREDENTIALS, Context.MODE_PRIVATE);
+        String url = credentials.getString(UmbrellaLogin.URL,null);
+        if (url == null) {
+            openSettings();
+            return;
+        }
+
         List<Message> messages = MessageDB.loadLast(10);
-        Log.d(TAG,"messages: "+messages);
         LinearLayout msgList = findViewById(R.id.message_list);
         msgList.removeAllViews();
         for (Message msg : messages){
@@ -52,6 +77,8 @@ public class MainActivity extends AppCompatActivity {
 
         NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         nm.cancelAll();
+
+
     }
 
     public void showMessage(Message message) {

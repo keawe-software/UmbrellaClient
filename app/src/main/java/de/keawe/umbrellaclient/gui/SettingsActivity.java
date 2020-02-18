@@ -183,7 +183,7 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
     }
 
     @Override
-    public void onResponse(String response, String token) {
+    public void onResponse(String response) {
         Log.d(TAG,"Response: "+response);
     }
 

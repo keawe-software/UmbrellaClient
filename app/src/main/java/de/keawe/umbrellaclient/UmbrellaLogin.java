@@ -1,6 +1,9 @@
 package de.keawe.umbrellaclient;
 
+import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 
 import com.android.volley.AuthFailureError;
 import com.android.volley.DefaultRetryPolicy;
@@ -19,6 +22,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+
+import de.keawe.umbrellaclient.gui.MainActivity;
 
 public class UmbrellaLogin {
     private static final String TAG = "UmbrellaLogin";
@@ -40,7 +45,9 @@ public class UmbrellaLogin {
 
     public void doLogin(final LoginListener listener) {
         listener.started();
-        RequestQueue queue = Volley.newRequestQueue(listener.context(),new HurlStack(){
+        Context context = listener.context();
+        if (context == null) throw new NullPointerException("You need to implement the context() method in your LoginListener!");
+        RequestQueue queue = Volley.newRequestQueue(context,new HurlStack(){
             @Override
             protected HttpURLConnection createConnection(URL url) throws IOException {
                 HttpURLConnection connection = super.createConnection(url);
@@ -51,7 +58,7 @@ public class UmbrellaLogin {
         StringRequest request = new StringRequest(Request.Method.POST, url+"/user/login", new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
-                listener.onResponse(response, token);
+                listener.onResponse(response);
             }
         }, new Response.ErrorListener() {
             @Override
@@ -90,10 +97,6 @@ public class UmbrellaLogin {
         credentials.commit();
     }
 
-    public String token() {
-        return token;
-    }
-
     public void get(String path, final LoginListener listener) {
         RequestQueue queue = Volley.newRequestQueue(listener.context());
         String glue = path.contains("?") ? "&" : "?";
@@ -101,7 +104,7 @@ public class UmbrellaLogin {
         StringRequest request = new StringRequest(Request.Method.GET, full, new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
-                listener.onResponse(response,token);
+                listener.onResponse(response);
             }
         }, new Response.ErrorListener() {
             @Override
@@ -110,5 +113,40 @@ public class UmbrellaLogin {
             }
         });
         queue.add(request);
+    }
+
+    public void openBrowser(final Context c) {
+        doLogin(new LoginListener() {
+            @Override
+            public void started() {
+
+            }
+
+            @Override
+            public Context context() {
+                return c;
+            }
+
+            @Override
+            public void onResponse(String response) {
+
+            }
+
+            @Override
+            public void onError() {
+
+            }
+
+            @Override
+            public void onLoginFailed() {
+
+            }
+
+            @Override
+            public void onTokenReceived(UmbrellaLogin login) {
+                Intent myIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url+"/user/edit?token="+token));
+                c.startActivity(myIntent);
+            }
+        });
     }
 }
