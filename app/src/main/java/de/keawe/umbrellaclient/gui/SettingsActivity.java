@@ -33,37 +33,36 @@ import de.keawe.umbrellaclient.UmbrellaLogin;
 public class SettingsActivity extends AppCompatActivity implements LoginListener {
     private static final String TAG = "SettingsActivity";
     public static final String CREDENTIALS = "credentials";
+    public static final String ENABLE_SERVICE = "enable_service";
 
     private Handler handler = new Handler();
-    private Button btn;
+    private Button testConnectionButton;
     private ProgressDialog dialog;
+    private Button serviceButton;
+    private SharedPreferences prefs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
 
-        btn = findViewById(R.id.test_btn);
-        btn.setOnClickListener(new View.OnClickListener() {
+        testConnectionButton = findViewById(R.id.test_btn);
+        testConnectionButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 testConnection();
             }
         });
 
-        final Button serviceButton = findViewById(R.id.service_btn);
+        serviceButton = findViewById(R.id.service_btn);
         serviceButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (serviceRunning()){
-                    stopService();
-                } else {
-                    startService();
-                }
+                toggleService();
             }
         });
 
-        SharedPreferences prefs = getSharedPreferences(CREDENTIALS, MODE_PRIVATE);
+        prefs = getSharedPreferences(CREDENTIALS, MODE_PRIVATE);
         if (prefs != null){
             EditText urlInput = findViewById(R.id.url);
             urlInput.setText(prefs.getString(UmbrellaLogin.URL,getString(R.string.url_example)));
@@ -89,6 +88,12 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
         intervalSelector.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_item,options));
     }
 
+    private void toggleService() {
+        if (serviceRunning()){
+            stopService();
+        } else startService();
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -96,7 +101,6 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
     }
 
     private void checkService() {
-        final Button serviceButton = findViewById(R.id.service_btn);
         if (serviceRunning()){
             serviceButton.setText(R.string.disable);
             serviceButton.setVisibility(View.VISIBLE);
@@ -105,6 +109,7 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
 
     private void stopService() {
         WorkManager.getInstance(this).cancelAllWork();
+        prefs.edit().putBoolean(ENABLE_SERVICE,false).commit();
         checkService();
     }
 
@@ -129,6 +134,7 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
     private void startService() {
         PeriodicWorkRequest workRequest = new PeriodicWorkRequest.Builder(MessageChecker.class,15, TimeUnit.MINUTES).build();
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(MessageChecker.TAG, ExistingPeriodicWorkPolicy.REPLACE,workRequest);
+        prefs.edit().putBoolean(ENABLE_SERVICE,true).commit();
         checkService();
     }
 
@@ -149,10 +155,10 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
     }
 
     private void testConnection() {
-        btn.setEnabled(false);
+        testConnectionButton.setEnabled(false);
         findViewById(R.id.interval_legend).setVisibility(View.INVISIBLE);
         findViewById(R.id.interval).setVisibility(View.INVISIBLE);
-        findViewById(R.id.service_btn).setVisibility(View.INVISIBLE);
+        serviceButton.setVisibility(View.INVISIBLE);
 
         EditText urlInput = findViewById(R.id.url);
         final String url = urlInput.getText().toString().trim();
@@ -196,7 +202,7 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
     public void onLoginFailed() {
         TextView tv = findViewById(R.id.status);
         tv.setText(R.string.login_failed);
-        btn.setEnabled(true);
+        testConnectionButton.setEnabled(true);
         if (dialog!=null) dialog.cancel();
         fadeBackground(tv,255,0,0);
     }
@@ -208,9 +214,9 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
         tv.setText(R.string.logged_in);
         findViewById(R.id.interval_legend).setVisibility(View.VISIBLE);
         findViewById(R.id.interval).setVisibility(View.VISIBLE);
-        findViewById(R.id.service_btn).setVisibility(View.VISIBLE);
-        btn.setEnabled(true);
+        serviceButton.setVisibility(View.VISIBLE);
+        testConnectionButton.setEnabled(true);
         fadeBackground(tv,0,255,0);
-        login.storeCredentials(getSharedPreferences(CREDENTIALS, MODE_PRIVATE).edit());
+        login.storeCredentials(prefs.edit());
     }
 }
