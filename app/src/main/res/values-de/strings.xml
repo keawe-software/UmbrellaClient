@@ -23,11 +23,13 @@
     <string name="test_connection">Verbindung testen</string>
     <string name="interval_legend">Wähle, wie oft neue Nachrichten von Umbrella geholt werden sollen:</string>
     <string name="enable">Service aktivieren</string>
-    <string name="trying_to_connect">Login-Versuch...</string>
+    <string name="trying_to_connect">Login-Versuch…</string>
     <string name="disable">Service deaktivieren</string>
     <string name="tap_to_display">Hier tippen, um Nachricht anzuzeigen</string>
     <string name="settings">Einstellungen</string>
     <string name="from">Von:</string>
     <string name="time">Zeit:</string>
     <string name="login_btn">bei Umbrella anmelden</string>
+    <string name="refresh">Aktualisieren</string>
+    <string name="icon">Umbrella-Symbol</string>
 </resources>

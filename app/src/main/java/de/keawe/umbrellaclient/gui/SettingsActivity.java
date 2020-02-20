@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -27,19 +28,22 @@ import androidx.work.WorkManager;
 import de.keawe.umbrellaclient.LoginListener;
 import de.keawe.umbrellaclient.MessageChecker;
 import de.keawe.umbrellaclient.R;
+import de.keawe.umbrellaclient.TimeOption;
 import de.keawe.umbrellaclient.UmbrellaLogin;
 
 
-public class SettingsActivity extends AppCompatActivity implements LoginListener {
+public class SettingsActivity extends AppCompatActivity implements LoginListener, AdapterView.OnItemSelectedListener {
     private static final String TAG = "SettingsActivity";
     public static final String CREDENTIALS = "credentials";
-    public static final String ENABLE_SERVICE = "enable_service";
+    public static final String INTERVAL = "interval";
+    private static int HOUR = 60;
 
     private Handler handler = new Handler();
     private Button testConnectionButton;
     private ProgressDialog dialog;
     private Button serviceButton;
     private SharedPreferences prefs;
+    private Spinner intervalSelector;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,6 +66,19 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
             }
         });
 
+        intervalSelector = findViewById(R.id.interval);
+        ArrayList<TimeOption> options = new ArrayList<>();
+        options.add(new TimeOption(getString(R.string.check15),15));
+        options.add(new TimeOption(getString(R.string.check20),20));
+        options.add(new TimeOption(getString(R.string.check30),30));
+        options.add(new TimeOption(getString(R.string.check_hourly),HOUR));
+        options.add(new TimeOption(getString(R.string.check2),2*HOUR));
+        options.add(new TimeOption(getString(R.string.check4),4*HOUR));
+        options.add(new TimeOption(getString(R.string.check_twice_per_day),12*HOUR));
+        options.add(new TimeOption(getString(R.string.check_daily),24*HOUR));
+
+        intervalSelector.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,options));
+
         prefs = getSharedPreferences(CREDENTIALS, MODE_PRIVATE);
         if (prefs != null){
             EditText urlInput = findViewById(R.id.url);
@@ -72,20 +89,25 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
 
             EditText passInput = findViewById(R.id.password);
             passInput.setText(prefs.getString(UmbrellaLogin.PASS,null));
+
+            int minutes = prefs.getInt(INTERVAL,0);
+            for (int i = 0; i< options.size(); i++){
+                Object item = intervalSelector.getItemAtPosition(i);
+                if (item instanceof TimeOption){
+                    TimeOption option = (TimeOption) item;
+                    if (option.minutes() == minutes) intervalSelector.setSelection(i);
+                }
+            }
         }
 
-        Spinner intervalSelector = findViewById(R.id.interval);
-        ArrayList<String> options = new ArrayList<String>();
-        options.add(getString(R.string.check15));
-        options.add(getString(R.string.check20));
-        options.add(getString(R.string.check30));
-        options.add(getString(R.string.check_hourly));
-        options.add(getString(R.string.check2));
-        options.add(getString(R.string.check4));
-        options.add(getString(R.string.check_twice_per_day));
-        options.add(getString(R.string.check_daily));
+        Runnable r = new Runnable() {
+            @Override
+            public void run() {
+                intervalSelector.setOnItemSelectedListener(SettingsActivity.this);
+            }
+        };
+        new Handler().postDelayed(r,1000);
 
-        intervalSelector.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_item,options));
     }
 
     private void toggleService() {
@@ -103,13 +125,13 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
     private void checkService() {
         if (serviceRunning()){
             serviceButton.setText(R.string.disable);
-            serviceButton.setVisibility(View.VISIBLE);
+            findViewById(R.id.schedule_options).setVisibility(View.VISIBLE);
         } else serviceButton.setText(R.string.enable);
     }
 
     private void stopService() {
         WorkManager.getInstance(this).cancelAllWork();
-        prefs.edit().putBoolean(ENABLE_SERVICE,false).commit();
+        prefs.edit().putInt(INTERVAL,0).commit();
         checkService();
     }
 
@@ -132,10 +154,15 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
     }
 
     private void startService() {
-        PeriodicWorkRequest workRequest = new PeriodicWorkRequest.Builder(MessageChecker.class,15, TimeUnit.MINUTES).build();
-        WorkManager.getInstance(this).enqueueUniquePeriodicWork(MessageChecker.TAG, ExistingPeriodicWorkPolicy.REPLACE,workRequest);
-        prefs.edit().putBoolean(ENABLE_SERVICE,true).commit();
-        checkService();
+        Object item = intervalSelector.getSelectedItem();
+        if (item instanceof TimeOption){
+            TimeOption interval = (TimeOption) item;
+            PeriodicWorkRequest workRequest = new PeriodicWorkRequest.Builder(MessageChecker.class,interval.minutes(), TimeUnit.MINUTES).build();
+            WorkManager.getInstance(this).enqueueUniquePeriodicWork(MessageChecker.TAG, ExistingPeriodicWorkPolicy.REPLACE,workRequest);
+            prefs.edit().putInt(INTERVAL,interval.minutes()).commit();
+            Log.d(TAG,item.getClass().getSimpleName());
+            checkService();
+        }
     }
 
     private void fadeBackground(final View tv, final int r, final int g, final int b) {
@@ -156,9 +183,7 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
 
     private void testConnection() {
         testConnectionButton.setEnabled(false);
-        findViewById(R.id.interval_legend).setVisibility(View.INVISIBLE);
-        findViewById(R.id.interval).setVisibility(View.INVISIBLE);
-        serviceButton.setVisibility(View.INVISIBLE);
+        findViewById(R.id.schedule_options).setVisibility(View.INVISIBLE);
 
         EditText urlInput = findViewById(R.id.url);
         final String url = urlInput.getText().toString().trim();
@@ -212,11 +237,28 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
         if (dialog!=null) dialog.cancel();
         TextView tv = findViewById(R.id.status);
         tv.setText(R.string.logged_in);
-        findViewById(R.id.interval_legend).setVisibility(View.VISIBLE);
-        findViewById(R.id.interval).setVisibility(View.VISIBLE);
-        serviceButton.setVisibility(View.VISIBLE);
+        findViewById(R.id.schedule_options).setVisibility(View.VISIBLE);
         testConnectionButton.setEnabled(true);
         fadeBackground(tv,0,255,0);
         login.storeCredentials(prefs.edit());
+    }
+
+    @Override
+    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+        if (serviceRunning()){ // restart service, if already running
+            stopService();
+            Runnable r = new Runnable() {
+                @Override
+                public void run() {
+                    startService();
+                }
+            };
+            new Handler().postDelayed(r,1000);
+        }
+    }
+
+    @Override
+    public void onNothingSelected(AdapterView<?> parent) {
+
     }
 }

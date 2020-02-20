@@ -10,6 +10,7 @@
         android:id="@+id/logo"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:contentDescription="@string/icon"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:srcCompat="@drawable/umbrella100px" />
@@ -46,6 +47,7 @@
         app:layout_constraintTop_toBottomOf="@+id/textView2" />
 
     <AutoCompleteTextView
+        android:hint="https://umbrella.keawe.de"
         android:id="@+id/url"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -100,34 +102,35 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/password" />
 
-    <TextView
-        android:id="@+id/interval_legend"
+
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/interval_legend"
-        android:padding="20dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        app:layout_constraintTop_toBottomOf="@+id/test_btn"
         android:visibility="invisible"
-        app:layout_constraintTop_toBottomOf="@+id/test_btn" />
+        android:id="@+id/schedule_options">
 
-    <Spinner
-        android:id="@+id/interval"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@+id/interval_legend"
-        android:padding="10dp"
-        android:visibility="invisible"
-        tools:layout_editor_absoluteX="28dp" />
+        <TextView
+            android:id="@+id/interval_legend"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="20dp"
+            android:text="@string/interval_legend" />
 
-    <Button
-        android:id="@+id/service_btn"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/enable"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        android:visibility="invisible"
-        app:layout_constraintTop_toBottomOf="@+id/interval" />
+        <Spinner
+            android:id="@+id/interval"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="10dp" />
 
+        <Button
+            android:id="@+id/service_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/enable" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/status"
@@ -135,7 +138,7 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:padding="10dp"
-        android:textSize="16dp"
+        android:textSize="16sp"
         app:layout_constraintBottom_toBottomOf="parent"
         tools:layout_editor_absoluteX="211dp" />
 
