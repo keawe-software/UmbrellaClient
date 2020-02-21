@@ -33,6 +33,11 @@
                 <action android:name="android.intent.action.REBOOT"/>
             </intent-filter>
         </receiver>
+
+        <service
+            android:name=".CheckService"
+            android:exported="false"/>
+
     </application>
 
 </manifest>

@@ -7,11 +7,11 @@ public interface LoginListener {
 
     Context context();
 
-    void onResponse(String response);
+    void onLoginResponse(String response);
 
-    void onError();
+    void onLoginError();
 
     void onLoginFailed();
 
-    void onTokenReceived(UmbrellaLogin login);
+    void onLoginTokenReceived(UmbrellaConnection login);
 }

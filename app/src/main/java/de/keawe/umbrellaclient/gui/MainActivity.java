@@ -7,21 +7,20 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
-
-import org.json.JSONArray;
-import org.json.JSONException;
 
 import java.util.List;
 
 import androidx.appcompat.app.AppCompatActivity;
-import de.keawe.umbrellaclient.LoginListener;
+import de.keawe.umbrellaclient.CheckService;
+import de.keawe.umbrellaclient.MessageHandler;
 import de.keawe.umbrellaclient.R;
-import de.keawe.umbrellaclient.UmbrellaLogin;
+import de.keawe.umbrellaclient.UmbrellaConnection;
 import de.keawe.umbrellaclient.db.Message;
 import de.keawe.umbrellaclient.db.MessageDB;
 
-public class MainActivity extends AppCompatActivity implements LoginListener {
+import static de.keawe.umbrellaclient.gui.SettingsActivity.INTERVAL_MINUTES;
+
+public class MainActivity extends AppCompatActivity implements MessageHandler {
     public static final String TAG = "MainActivity";
 
     @Override
@@ -55,22 +54,16 @@ public class MainActivity extends AppCompatActivity implements LoginListener {
 
     private void refresh() {
         findViewById(R.id.refresh_btn).setEnabled(false);
-        SharedPreferences credentials = getSharedPreferences(SettingsActivity.CREDENTIALS, Context.MODE_PRIVATE);
-        String url = credentials.getString(UmbrellaLogin.URL,null);
-        String user = credentials.getString(UmbrellaLogin.USER,null);
-        String pass = credentials.getString(UmbrellaLogin.PASS,null);
-
-        UmbrellaLogin login = new UmbrellaLogin(url,user,pass);
-        login.doLogin(this);
+        new UmbrellaConnection(this).fetchMessages(this);
     }
 
     private void login() {
         SharedPreferences credentials = getSharedPreferences(SettingsActivity.CREDENTIALS, Context.MODE_PRIVATE);
-        String url = credentials.getString(UmbrellaLogin.URL,null);
-        String user = credentials.getString(UmbrellaLogin.USER,null);
-        String pass = credentials.getString(UmbrellaLogin.PASS,null);
+        String url = credentials.getString(UmbrellaConnection.URL,null);
+        String user = credentials.getString(UmbrellaConnection.USER,null);
+        String pass = credentials.getString(UmbrellaConnection.PASS,null);
 
-        UmbrellaLogin login = new UmbrellaLogin(url,user,pass);
+        UmbrellaConnection login = new UmbrellaConnection(url,user,pass);
         login.openBrowser(this);
     }
 
@@ -84,11 +77,20 @@ public class MainActivity extends AppCompatActivity implements LoginListener {
         super.onResume();
 
         SharedPreferences credentials = getSharedPreferences(SettingsActivity.CREDENTIALS, Context.MODE_PRIVATE);
-        String url = credentials.getString(UmbrellaLogin.URL,null);
+
+        // go to setitings, if no login has been activated before
+        String url = credentials.getString(UmbrellaConnection.URL,null);
         if (url == null) {
             openSettings();
             return;
         }
+
+        // restart service in case it is running but not running
+        if (!CheckService.running()){
+            int minutes = credentials.getInt(INTERVAL_MINUTES,0);
+            if (minutes > 0) startService(new Intent(this, CheckService.class));
+        }
+
 
         updateMessageList();
         NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
@@ -103,28 +105,6 @@ public class MainActivity extends AppCompatActivity implements LoginListener {
         startActivity(msgDisplay);
     }
 
-    @Override
-    public void started() {
-
-    }
-
-    @Override
-    public Context context() {
-        return this;
-    }
-
-    @Override
-    public void onResponse(String response) {
-        if (response.trim().startsWith("[{")) try {
-            JSONArray arr = new JSONArray(response);
-            for (int i = 0; i<arr.length(); i++) new Message(arr.getJSONObject(i)).store();
-            updateMessageList();
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        findViewById(R.id.refresh_btn).setEnabled(true);
-    }
-
     private void updateMessageList() {
         List<Message> messages = MessageDB.loadLast(10);
         LinearLayout msgList = findViewById(R.id.message_list);
@@ -133,19 +113,17 @@ public class MainActivity extends AppCompatActivity implements LoginListener {
     }
 
     @Override
-    public void onError() {
+    public void newMessage(Message msg) {
 
     }
 
     @Override
-    public void onLoginFailed() {
-        findViewById(R.id.refresh_btn).setEnabled(true);
+    public void gotNewMessages(int count) {
+        if (count > 0) updateMessageList();
     }
 
     @Override
-    public void onTokenReceived(UmbrellaLogin login) {
-        Message lastMessage = MessageDB.lastMessage();
-        long id = lastMessage == null ? -1 : lastMessage.id();
-        login.get("/user/json?messages="+id,this);
+    public Context context() {
+        return this;
     }
 }

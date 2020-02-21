@@ -2,6 +2,7 @@ package de.keawe.umbrellaclient.gui;
 
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -16,26 +17,19 @@ import android.widget.Spinner;
 import android.widget.TextView;
 
 import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.work.ExistingPeriodicWorkPolicy;
-import androidx.work.PeriodicWorkRequest;
-import androidx.work.WorkInfo;
-import androidx.work.WorkManager;
+import de.keawe.umbrellaclient.CheckService;
 import de.keawe.umbrellaclient.LoginListener;
-import de.keawe.umbrellaclient.MessageChecker;
 import de.keawe.umbrellaclient.R;
 import de.keawe.umbrellaclient.TimeOption;
-import de.keawe.umbrellaclient.UmbrellaLogin;
+import de.keawe.umbrellaclient.UmbrellaConnection;
 
 
 public class SettingsActivity extends AppCompatActivity implements LoginListener, AdapterView.OnItemSelectedListener {
     private static final String TAG = "SettingsActivity";
     public static final String CREDENTIALS = "credentials";
-    public static final String INTERVAL = "interval";
+    public static final String INTERVAL_MINUTES = "interval";
     private static int HOUR = 60;
 
     private Handler handler = new Handler();
@@ -44,6 +38,18 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
     private Button serviceButton;
     private SharedPreferences prefs;
     private Spinner intervalSelector;
+
+    private Runnable checkService = new Runnable() {
+        @Override
+        public void run() {
+            Log.d(TAG,"checkService()");
+            if (serviceRunning()){
+                serviceButton.setText(R.string.disable);
+                findViewById(R.id.schedule_options).setVisibility(View.VISIBLE);
+            } else serviceButton.setText(R.string.enable);
+
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,15 +88,15 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
         prefs = getSharedPreferences(CREDENTIALS, MODE_PRIVATE);
         if (prefs != null){
             EditText urlInput = findViewById(R.id.url);
-            urlInput.setText(prefs.getString(UmbrellaLogin.URL,getString(R.string.url_example)));
+            urlInput.setText(prefs.getString(UmbrellaConnection.URL,getString(R.string.url_example)));
 
             EditText userInput = findViewById(R.id.username);
-            userInput.setText(prefs.getString(UmbrellaLogin.USER,null));
+            userInput.setText(prefs.getString(UmbrellaConnection.USER,null));
 
             EditText passInput = findViewById(R.id.password);
-            passInput.setText(prefs.getString(UmbrellaLogin.PASS,null));
+            passInput.setText(prefs.getString(UmbrellaConnection.PASS,null));
 
-            int minutes = prefs.getInt(INTERVAL,0);
+            int minutes = prefs.getInt(INTERVAL_MINUTES,0);
             for (int i = 0; i< options.size(); i++){
                 Object item = intervalSelector.getItemAtPosition(i);
                 if (item instanceof TimeOption){
@@ -123,46 +129,27 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
     }
 
     private void checkService() {
-        if (serviceRunning()){
-            serviceButton.setText(R.string.disable);
-            findViewById(R.id.schedule_options).setVisibility(View.VISIBLE);
-        } else serviceButton.setText(R.string.enable);
+        handler.postDelayed(checkService,500);
     }
 
     private void stopService() {
-        WorkManager.getInstance(this).cancelAllWork();
-        prefs.edit().putInt(INTERVAL,0).commit();
+        Log.d(TAG,"stopService()");
+        storeInterval(0);
+        CheckService.stop();
         checkService();
     }
 
     private boolean serviceRunning() {
-        try {
-            List<WorkInfo> list = WorkManager.getInstance(this).getWorkInfosForUniqueWork(MessageChecker.TAG).get();
-            if (list.size()<1) return false;
-            Log.d(TAG,"list: "+list);
-            boolean state = false;
-            for (WorkInfo wi: list) {
-                if (wi.getState().equals(WorkInfo.State.ENQUEUED)) state = true;
-            }
-            return state;
-        } catch (ExecutionException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        return false;
+        boolean result = CheckService.running();
+        Log.d(TAG,"serviceRunning() => " + result);
+        return result;
     }
 
     private void startService() {
-        Object item = intervalSelector.getSelectedItem();
-        if (item instanceof TimeOption){
-            TimeOption interval = (TimeOption) item;
-            PeriodicWorkRequest workRequest = new PeriodicWorkRequest.Builder(MessageChecker.class,interval.minutes(), TimeUnit.MINUTES).build();
-            WorkManager.getInstance(this).enqueueUniquePeriodicWork(MessageChecker.TAG, ExistingPeriodicWorkPolicy.REPLACE,workRequest);
-            prefs.edit().putInt(INTERVAL,interval.minutes()).commit();
-            Log.d(TAG,item.getClass().getSimpleName());
-            checkService();
-        }
+        Log.d(TAG,"startService()");
+        setInterValFromSelection();
+        startService(new Intent(this, CheckService.class));
+        checkService();
     }
 
     private void fadeBackground(final View tv, final int r, final int g, final int b) {
@@ -194,7 +181,7 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
         EditText passInput = findViewById(R.id.password);
         final String password = passInput.getText().toString().trim();
 
-        UmbrellaLogin login = new UmbrellaLogin(url, username, password);
+        UmbrellaConnection login = new UmbrellaConnection(url, username, password);
         login.doLogin(this);
 
     }
@@ -213,14 +200,37 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
         return this;
     }
 
+    private void setInterValFromSelection(){
+        Log.d(TAG,"setIntervalFromSelection()");
+        Object item = intervalSelector.getSelectedItem();
+        if (item instanceof TimeOption) storeInterval(((TimeOption) item).minutes());
+    }
+
+
     @Override
-    public void onResponse(String response) {
+    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+        Log.d(TAG,"onItemSelected()");
+        setInterValFromSelection();
+    }
+
+    private void storeInterval(int minutes){
+        Log.d(TAG,"storeInterval("+minutes+" min)");
+        prefs.edit().putInt(INTERVAL_MINUTES,minutes).commit();
+    }
+
+    @Override
+    public void onNothingSelected(AdapterView<?> parent) {
+
+    }
+
+    @Override
+    public void onLoginResponse(String response) {
         Log.d(TAG,"Response: "+response);
     }
 
     @Override
-    public void onError() {
-        Log.d(TAG,"onError");
+    public void onLoginError() {
+        Log.d(TAG,"onLoginError");
     }
 
     @Override
@@ -233,7 +243,7 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
     }
 
     @Override
-    public void onTokenReceived(UmbrellaLogin login) {
+    public void onLoginTokenReceived(UmbrellaConnection login) {
         if (dialog!=null) dialog.cancel();
         TextView tv = findViewById(R.id.status);
         tv.setText(R.string.logged_in);
@@ -241,24 +251,5 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
         testConnectionButton.setEnabled(true);
         fadeBackground(tv,0,255,0);
         login.storeCredentials(prefs.edit());
-    }
-
-    @Override
-    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-        if (serviceRunning()){ // restart service, if already running
-            stopService();
-            Runnable r = new Runnable() {
-                @Override
-                public void run() {
-                    startService();
-                }
-            };
-            new Handler().postDelayed(r,1000);
-        }
-    }
-
-    @Override
-    public void onNothingSelected(AdapterView<?> parent) {
-
     }
 }

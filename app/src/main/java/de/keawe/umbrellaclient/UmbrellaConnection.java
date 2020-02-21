@@ -15,6 +15,9 @@ import com.android.volley.toolbox.HurlStack;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+
 import java.io.IOException;
 import java.net.CookieHandler;
 import java.net.CookieManager;
@@ -23,20 +26,29 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
-import de.keawe.umbrellaclient.gui.MainActivity;
+import de.keawe.umbrellaclient.db.Message;
+import de.keawe.umbrellaclient.db.MessageDB;
+import de.keawe.umbrellaclient.gui.SettingsActivity;
 
-public class UmbrellaLogin {
-    private static final String TAG = "UmbrellaLogin";
+public class UmbrellaConnection {
+    private static final String TAG = "UmbrellaConnection";
     public static final String URL = "url";
     public static final String PASS = "pass";
     public static final String USER = "user";
-
     private final String url;
     private final String pass;
     private final String user;
     private String token = null;
 
-    public UmbrellaLogin(String url, String user, String pass){
+    private static String getPref(Context c, String key){
+        return c.getSharedPreferences(SettingsActivity.CREDENTIALS,Context.MODE_PRIVATE).getString(key,null);
+    }
+
+    public UmbrellaConnection(Context c){
+        this(getPref(c,URL),getPref(c,USER),getPref(c,PASS));
+    }
+
+    public UmbrellaConnection(String url, String user, String pass){
         this.url = url;
         this.user = user;
         this.pass = pass;
@@ -58,12 +70,12 @@ public class UmbrellaLogin {
         StringRequest request = new StringRequest(Request.Method.POST, url+"/user/login", new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
-                listener.onResponse(response);
+                listener.onLoginResponse(response);
             }
         }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                listener.onError();
+                listener.onLoginError();
             }
         }) {
             @Override
@@ -73,8 +85,8 @@ public class UmbrellaLogin {
                 if (token == null){
                     listener.onLoginFailed();
                 } else {
-                    UmbrellaLogin.this.token = token;
-                    listener.onTokenReceived(UmbrellaLogin.this);
+                    UmbrellaConnection.this.token = token;
+                    listener.onLoginTokenReceived(UmbrellaConnection.this);
                 }
             }
 
@@ -104,12 +116,12 @@ public class UmbrellaLogin {
         StringRequest request = new StringRequest(Request.Method.GET, full, new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
-                listener.onResponse(response);
+                listener.onLoginResponse(response);
             }
         }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                listener.onError();
+                listener.onLoginError();
             }
         });
         queue.add(request);
@@ -128,12 +140,12 @@ public class UmbrellaLogin {
             }
 
             @Override
-            public void onResponse(String response) {
+            public void onLoginResponse(String response) {
 
             }
 
             @Override
-            public void onError() {
+            public void onLoginError() {
 
             }
 
@@ -143,9 +155,58 @@ public class UmbrellaLogin {
             }
 
             @Override
-            public void onTokenReceived(UmbrellaLogin login) {
+            public void onLoginTokenReceived(UmbrellaConnection login) {
                 Intent myIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url+"/user/edit?token="+token));
                 c.startActivity(myIntent);
+            }
+        });
+    }
+
+    public void fetchMessages(final MessageHandler messageHandler) {
+        doLogin(new LoginListener() {
+            @Override
+            public void started() {
+
+            }
+
+            @Override
+            public Context context() {
+                return messageHandler.context();
+            }
+
+            @Override
+            public void onLoginResponse(String response) {
+                if (response.trim().startsWith("[{")) try {
+                    JSONArray arr = new JSONArray(response);
+                    int count = 0;
+                    for (int i = 0; i<arr.length(); i++) {
+                        Message msg = new Message(arr.getJSONObject(i)).store();
+                        if (msg != null) {
+                            count++;
+                            messageHandler.newMessage(msg);
+                        }
+                    }
+                    messageHandler.gotNewMessages(count);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            @Override
+            public void onLoginError() {
+
+            }
+
+            @Override
+            public void onLoginFailed() {
+
+            }
+
+            @Override
+            public void onLoginTokenReceived(UmbrellaConnection login) {
+                Message lastMessage = MessageDB.lastMessage();
+                long id = lastMessage == null ? -1 : lastMessage.id();
+                login.get("/user/json?messages="+id,this);
             }
         });
     }

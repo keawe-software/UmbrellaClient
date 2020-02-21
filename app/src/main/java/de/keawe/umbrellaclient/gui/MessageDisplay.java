@@ -11,7 +11,7 @@ import java.io.Serializable;
 
 import androidx.appcompat.app.AppCompatActivity;
 import de.keawe.umbrellaclient.R;
-import de.keawe.umbrellaclient.UmbrellaLogin;
+import de.keawe.umbrellaclient.UmbrellaConnection;
 import de.keawe.umbrellaclient.db.Message;
 import us.feras.mdv.MarkdownView;
 
@@ -32,11 +32,11 @@ public class MessageDisplay extends AppCompatActivity {
 
     private void login() {
         SharedPreferences credentials = getSharedPreferences(SettingsActivity.CREDENTIALS, Context.MODE_PRIVATE);
-        String url = credentials.getString(UmbrellaLogin.URL,null);
-        String user = credentials.getString(UmbrellaLogin.USER,null);
-        String pass = credentials.getString(UmbrellaLogin.PASS,null);
+        String url = credentials.getString(UmbrellaConnection.URL,null);
+        String user = credentials.getString(UmbrellaConnection.USER,null);
+        String pass = credentials.getString(UmbrellaConnection.PASS,null);
 
-        UmbrellaLogin login = new UmbrellaLogin(url,user,pass);
+        UmbrellaConnection login = new UmbrellaConnection(url,user,pass);
         login.openBrowser(this);
     }
 
