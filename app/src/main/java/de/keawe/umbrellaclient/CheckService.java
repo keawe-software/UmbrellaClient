@@ -29,68 +29,55 @@ public class CheckService extends Service implements MessageHandler {
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        Log.d(TAG, "onBind()");
+//        Log.d(TAG, "onBind()");
         return null;
     }
 
     @Override
     public void onCreate() {
-        Log.d(TAG, "onCreate()");
+  //      Log.d(TAG, "onCreate()");
         super.onCreate();
         handler = new Handler();
-        schedule(doMagic(),5*SECOND); // for automatic start/stop
-    }
-
-    @Override
-    public void onDestroy() {
-        Log.d(TAG, "onDestroy()");
-        super.onDestroy();
+        schedule(checkForMessages(),5*SECOND); // for automatic start/stop
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d(TAG, "onStartCommand(..., flags = " + flags + ", startId = " + startId + ")");
-        schedule(doMagic(),5*SECOND); // for manual start/stop
+        //Log.d(TAG, "onStartCommand(..., flags = " + flags + ", startId = " + startId + ")");
+        schedule(checkForMessages(),5*SECOND); // for manual start/stop
         return super.onStartCommand(intent, flags, startId);
     }
 
-    private Runnable doMagic() {
+    private Runnable checkForMessages() {
         return new Runnable() {
             @Override
             public void run() {
-                long time = new Date().getTime();
                 SharedPreferences prefs = getSharedPreferences(SettingsActivity.CREDENTIALS, MODE_PRIVATE);
                 int minutes = prefs.getInt(SettingsActivity.INTERVAL_MINUTES, 0);
-                Log.d(TAG, "doMagic(version 15 @ " + time + ") – minutes = "+minutes);
+                Log.d(TAG, "checkForMessages(version 16 @ " + (new Date().getTime()) + ") – minutes = "+minutes);
                 new UmbrellaConnection(getBaseContext()).fetchMessages(CheckService.this);
                 if (minutes > 0) {
-                    schedule(this,5*SECOND);
+                    schedule(this,minutes*60*SECOND);
                 } else stop();
             }
         };
     }
 
-    @Override
-    public void onStart(Intent intent, int startId) {
-        Log.d(TAG, "onStart(..., startId = " + startId + ")");
-        super.onStart(intent, startId);
-    }
-
     public static void schedule(Runnable r,int delayMilis){
         stop();
-        Log.d(TAG,"schedule(r, "+delayMilis+" ms)");
+//        Log.d(TAG,"schedule(r, "+delayMilis+" ms)");
         scheduled = r;
         handler.postDelayed(scheduled,delayMilis);
     }
 
     public static boolean running(){
         boolean result = scheduled != null;
-        Log.d(TAG,"running() => "+result);
+//        Log.d(TAG,"running() => "+result);
         return result;
     }
 
     public static void stop(){
-        Log.d(TAG,"stop()");
+//        Log.d(TAG,"stop()");
         if (!running()) return;
         handler.removeCallbacks(scheduled);
         scheduled = null;
@@ -98,7 +85,7 @@ public class CheckService extends Service implements MessageHandler {
 
     @Override
     public void newMessage(Message msg) {
-        Log.d(TAG,"newMessage("+msg+");");
+        //Log.d(TAG,"newMessage("+msg+");");
         Context context = getBaseContext();
         NotificationManager man = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 

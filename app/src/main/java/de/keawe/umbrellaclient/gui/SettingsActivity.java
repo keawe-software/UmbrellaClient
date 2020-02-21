@@ -74,6 +74,7 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
 
         intervalSelector = findViewById(R.id.interval);
         ArrayList<TimeOption> options = new ArrayList<>();
+        options.add(new TimeOption(getString(R.string.check5),5));
         options.add(new TimeOption(getString(R.string.check15),15));
         options.add(new TimeOption(getString(R.string.check20),20));
         options.add(new TimeOption(getString(R.string.check30),30));
