@@ -20,8 +20,43 @@ import de.keawe.umbrellaclient.db.MessageDB;
 
 import static de.keawe.umbrellaclient.gui.SettingsActivity.INTERVAL_MINUTES;
 
-public class MainActivity extends AppCompatActivity implements MessageHandler {
+public class MainActivity extends AppCompatActivity {
     public static final String TAG = "MainActivity";
+
+    private void browserLogin() {
+        SharedPreferences credentials = getSharedPreferences(SettingsActivity.CREDENTIALS, Context.MODE_PRIVATE);
+        String url = credentials.getString(UmbrellaConnection.URL,null);
+        String user = credentials.getString(UmbrellaConnection.USER,null);
+        String pass = credentials.getString(UmbrellaConnection.PASS,null);
+
+        UmbrellaConnection login = new UmbrellaConnection(url,user,pass);
+        login.openBrowser(this);
+    }
+
+    private void fetchNewMessages() {
+        //Log.d(TAG,"fetchNewMessages()");
+        findViewById(R.id.refresh_btn).setEnabled(false);
+        new UmbrellaConnection(this).fetchMessages(new MessageHandler() {
+            @Override
+            public void newMessage(Message msg) {}
+
+            @Override
+            public void gotNewMessages(int count) {
+                if (count > 0) updateMessageList();
+                findViewById(R.id.refresh_btn).setEnabled(true);
+            }
+
+            @Override
+            public Context context() {
+                return MainActivity.this;
+            }
+
+            @Override
+            public void onError() {
+                findViewById(R.id.refresh_btn).setEnabled(true);
+            }
+        });
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,34 +75,18 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
         findViewById(R.id.login_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                login();
+                browserLogin();
             }
         });
 
         findViewById(R.id.refresh_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                refresh();
+                fetchNewMessages();
             }
         });
 
         updateMessageList();
-    }
-
-    private void refresh() {
-        //Log.d(TAG,"refresh()");
-        findViewById(R.id.refresh_btn).setEnabled(false);
-        new UmbrellaConnection(this).fetchMessages(this);
-    }
-
-    private void login() {
-        SharedPreferences credentials = getSharedPreferences(SettingsActivity.CREDENTIALS, Context.MODE_PRIVATE);
-        String url = credentials.getString(UmbrellaConnection.URL,null);
-        String user = credentials.getString(UmbrellaConnection.USER,null);
-        String pass = credentials.getString(UmbrellaConnection.PASS,null);
-
-        UmbrellaConnection login = new UmbrellaConnection(url,user,pass);
-        login.openBrowser(this);
     }
 
     private void openSettings() {
@@ -81,7 +100,7 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
 
         SharedPreferences credentials = getSharedPreferences(SettingsActivity.CREDENTIALS, Context.MODE_PRIVATE);
 
-        // go to setitings, if no login has been activated before
+        // go to setitings, if no browserLogin has been activated before
         String url = credentials.getString(UmbrellaConnection.URL,null);
         if (url == null) {
             openSettings();
@@ -96,8 +115,6 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
 
         NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         nm.cancelAll();
-
-
     }
 
     public void showMessage(Message message) {
@@ -111,21 +128,5 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
         LinearLayout msgList = findViewById(R.id.message_list);
         msgList.removeAllViews();
         for (Message msg : messages) msgList.addView(msg.view(this));
-    }
-
-    @Override
-    public void newMessage(Message msg) {
-
-    }
-
-    @Override
-    public void gotNewMessages(int count) {
-        if (count > 0) updateMessageList();
-        findViewById(R.id.refresh_btn).setEnabled(true);
-    }
-
-    @Override
-    public Context context() {
-        return this;
     }
 }

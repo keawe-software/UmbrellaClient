@@ -8,4 +8,5 @@ public interface MessageHandler {
     void newMessage(Message msg);
     void gotNewMessages(int count);
     Context context();
+    void onError();
 }

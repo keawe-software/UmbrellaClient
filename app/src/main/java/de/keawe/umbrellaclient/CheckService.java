@@ -10,9 +10,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.IBinder;
-import android.util.Log;
-
-import java.util.Date;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
@@ -26,35 +23,13 @@ public class CheckService extends Service implements MessageHandler {
     private static Runnable scheduled = null;
     private static final int SECOND = 1000;
 
-    @Nullable
-    @Override
-    public IBinder onBind(Intent intent) {
-//        Log.d(TAG, "onBind()");
-        return null;
-    }
-
-    @Override
-    public void onCreate() {
-  //      Log.d(TAG, "onCreate()");
-        super.onCreate();
-        handler = new Handler();
-        schedule(checkForMessages(),5*SECOND); // for automatic start/stop
-    }
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        //Log.d(TAG, "onStartCommand(..., flags = " + flags + ", startId = " + startId + ")");
-        schedule(checkForMessages(),5*SECOND); // for manual start/stop
-        return super.onStartCommand(intent, flags, startId);
-    }
-
     private Runnable checkForMessages() {
         return new Runnable() {
             @Override
             public void run() {
                 SharedPreferences prefs = getSharedPreferences(SettingsActivity.CREDENTIALS, MODE_PRIVATE);
                 int minutes = prefs.getInt(SettingsActivity.INTERVAL_MINUTES, 0);
-                Log.d(TAG, "checkForMessages(version 16 @ " + (new Date().getTime()) + ") – minutes = "+minutes);
+                //Log.d(TAG, "checkForMessages(version 16 @ " + (new Date().getTime()) + ") – minutes = "+minutes);
                 new UmbrellaConnection(getBaseContext()).fetchMessages(CheckService.this);
                 if (minutes > 0) {
                     schedule(this,minutes*60*SECOND);
@@ -63,25 +38,14 @@ public class CheckService extends Service implements MessageHandler {
         };
     }
 
-    public static void schedule(Runnable r,int delayMilis){
-        stop();
-//        Log.d(TAG,"schedule(r, "+delayMilis+" ms)");
-        scheduled = r;
-        handler.postDelayed(scheduled,delayMilis);
+
+    @Override
+    public Context context() {
+        return this;
     }
 
-    public static boolean running(){
-        boolean result = scheduled != null;
-//        Log.d(TAG,"running() => "+result);
-        return result;
-    }
-
-    public static void stop(){
-//        Log.d(TAG,"stop()");
-        if (!running()) return;
-        handler.removeCallbacks(scheduled);
-        scheduled = null;
-    }
+    @Override
+    public void gotNewMessages(int count) {}
 
     @Override
     public void newMessage(Message msg) {
@@ -111,18 +75,52 @@ public class CheckService extends Service implements MessageHandler {
 
 
         Notification notification = nb.build();
-
-
         man.notify((int) msg.id(),notification);
     }
 
+    @Nullable
     @Override
-    public void gotNewMessages(int count) {
-
+    public IBinder onBind(Intent intent) {
+//        Log.d(TAG, "onBind()");
+        return null;
     }
 
     @Override
-    public Context context() {
-        return this;
+    public void onCreate() {
+  //      Log.d(TAG, "onCreate()");
+        super.onCreate();
+        handler = new Handler();
+        schedule(checkForMessages(),5*SECOND); // for automatic start/stop
+    }
+
+    @Override
+    public void onError() {}
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        //Log.d(TAG, "onStartCommand(..., flags = " + flags + ", startId = " + startId + ")");
+        schedule(checkForMessages(),5*SECOND); // for manual start/stop
+        return super.onStartCommand(intent, flags, startId);
+    }
+
+    public static boolean running(){
+        boolean result = scheduled != null;
+//        Log.d(TAG,"running() => "+result);
+        return result;
+    }
+
+    public static void schedule(Runnable r,int delayMilis){
+        stop();
+//        Log.d(TAG,"schedule(r, "+delayMilis+" ms)");
+        scheduled = r;
+        handler.postDelayed(scheduled,delayMilis);
+    }
+
+
+    public static void stop(){
+//        Log.d(TAG,"stop()");
+        if (!running()) return;
+        handler.removeCallbacks(scheduled);
+        scheduled = null;
     }
 }

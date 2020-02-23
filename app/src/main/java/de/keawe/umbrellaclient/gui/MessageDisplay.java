@@ -3,7 +3,6 @@ package de.keawe.umbrellaclient.gui;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
@@ -52,7 +51,7 @@ public class MessageDisplay extends AppCompatActivity {
         ((TextView)findViewById(R.id.date)).setText(msg.timeString());
         ((TextView)findViewById(R.id.subject)).setText(msg.subject());
         MarkdownView content = findViewById(R.id.content);
-        Log.d(TAG,"displaying "+msg.content());
+        //Log.d(TAG,"displaying "+msg.content());
         content.loadMarkdown(msg.content());
     }
 }

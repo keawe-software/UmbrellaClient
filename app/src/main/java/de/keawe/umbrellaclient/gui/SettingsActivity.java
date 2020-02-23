@@ -20,13 +20,13 @@ import java.util.ArrayList;
 
 import androidx.appcompat.app.AppCompatActivity;
 import de.keawe.umbrellaclient.CheckService;
-import de.keawe.umbrellaclient.LoginListener;
 import de.keawe.umbrellaclient.R;
+import de.keawe.umbrellaclient.RequestListener;
 import de.keawe.umbrellaclient.TimeOption;
 import de.keawe.umbrellaclient.UmbrellaConnection;
 
 
-public class SettingsActivity extends AppCompatActivity implements LoginListener, AdapterView.OnItemSelectedListener {
+public class SettingsActivity extends AppCompatActivity implements AdapterView.OnItemSelectedListener {
     private static final String TAG = "SettingsActivity";
     public static final String CREDENTIALS = "credentials";
     public static final String INTERVAL_MINUTES = "interval";
@@ -42,7 +42,7 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
     private Runnable checkService = new Runnable() {
         @Override
         public void run() {
-            Log.d(TAG,"checkService()");
+            //Log.d(TAG,"checkService()");
             if (serviceRunning()){
                 serviceButton.setText(R.string.disable);
                 findViewById(R.id.schedule_options).setVisibility(View.VISIBLE);
@@ -182,27 +182,44 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
         EditText passInput = findViewById(R.id.password);
         final String password = passInput.getText().toString().trim();
 
-        UmbrellaConnection login = new UmbrellaConnection(url, username, password);
-        login.doLogin(this);
+        final UmbrellaConnection login = new UmbrellaConnection(url, username, password);
 
-    }
-
-    @Override
-    public void started() {
         dialog = new ProgressDialog(SettingsActivity.this);
         dialog.setMessage(getString(R.string.trying_to_connect));
         dialog.setIndeterminate(true);
         dialog.setCancelable(false);
         dialog.show();
-    }
 
-    @Override
-    public Context context() {
-        return this;
+        login.getPage("user/token", new RequestListener() {
+            @Override
+            public Context context() {
+                return SettingsActivity.this;
+            }
+
+            @Override
+            public void onResponse(String response) {
+                if (dialog!=null) dialog.cancel();
+                TextView tv = findViewById(R.id.status);
+                tv.setText(R.string.logged_in);
+                findViewById(R.id.schedule_options).setVisibility(View.VISIBLE);
+                testConnectionButton.setEnabled(true);
+                fadeBackground(tv,0,255,0);
+                login.storeCredentials(prefs.edit());
+            }
+
+            @Override
+            public void onError() {
+                TextView tv = findViewById(R.id.status);
+                tv.setText(R.string.login_failed);
+                testConnectionButton.setEnabled(true);
+                if (dialog!=null) dialog.cancel();
+                fadeBackground(tv,255,0,0);
+            }
+        });
     }
 
     private void setInterValFromSelection(){
-        Log.d(TAG,"setIntervalFromSelection()");
+        //Log.d(TAG,"setIntervalFromSelection()");
         Object item = intervalSelector.getSelectedItem();
         if (item instanceof TimeOption) storeInterval(((TimeOption) item).minutes());
     }
@@ -210,47 +227,16 @@ public class SettingsActivity extends AppCompatActivity implements LoginListener
 
     @Override
     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-        Log.d(TAG,"onItemSelected()");
+        //Log.d(TAG,"onItemSelected()");
         setInterValFromSelection();
     }
 
     private void storeInterval(int minutes){
-        Log.d(TAG,"storeInterval("+minutes+" min)");
+        //Log.d(TAG,"storeInterval("+minutes+" min)");
         prefs.edit().putInt(INTERVAL_MINUTES,minutes).commit();
     }
 
     @Override
     public void onNothingSelected(AdapterView<?> parent) {
-
-    }
-
-    @Override
-    public void onLoginResponse(String response) {
-        Log.d(TAG,"Response: "+response);
-    }
-
-    @Override
-    public void onLoginError() {
-        Log.d(TAG,"onLoginError");
-    }
-
-    @Override
-    public void onLoginFailed() {
-        TextView tv = findViewById(R.id.status);
-        tv.setText(R.string.login_failed);
-        testConnectionButton.setEnabled(true);
-        if (dialog!=null) dialog.cancel();
-        fadeBackground(tv,255,0,0);
-    }
-
-    @Override
-    public void onLoginTokenReceived(UmbrellaConnection login) {
-        if (dialog!=null) dialog.cancel();
-        TextView tv = findViewById(R.id.status);
-        tv.setText(R.string.logged_in);
-        findViewById(R.id.schedule_options).setVisibility(View.VISIBLE);
-        testConnectionButton.setEnabled(true);
-        fadeBackground(tv,0,255,0);
-        login.storeCredentials(prefs.edit());
     }
 }
