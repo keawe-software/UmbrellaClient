@@ -50,9 +50,12 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
                 refresh();
             }
         });
+
+        updateMessageList();
     }
 
     private void refresh() {
+        //Log.d(TAG,"refresh()");
         findViewById(R.id.refresh_btn).setEnabled(false);
         new UmbrellaConnection(this).fetchMessages(this);
     }
@@ -91,8 +94,6 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
             if (minutes > 0) startService(new Intent(this, CheckService.class));
         }
 
-
-        updateMessageList();
         NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         nm.cancelAll();
 
@@ -120,6 +121,7 @@ public class MainActivity extends AppCompatActivity implements MessageHandler {
     @Override
     public void gotNewMessages(int count) {
         if (count > 0) updateMessageList();
+        findViewById(R.id.refresh_btn).setEnabled(true);
     }
 
     @Override

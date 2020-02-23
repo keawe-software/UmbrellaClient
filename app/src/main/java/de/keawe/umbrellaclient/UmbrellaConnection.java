@@ -131,7 +131,7 @@ public class UmbrellaConnection {
         doLogin(new LoginListener() {
             @Override
             public void started() {
-
+                //Log.d(TAG,"openBrowser.started()");
             }
 
             @Override
@@ -141,21 +141,22 @@ public class UmbrellaConnection {
 
             @Override
             public void onLoginResponse(String response) {
-
+                //Log.d(TAG,"openBrowser.onLoginResponse("+response+")");
             }
 
             @Override
             public void onLoginError() {
-
+                //Log.d(TAG,"openBrowser.onLoginError()");
             }
 
             @Override
             public void onLoginFailed() {
-
+                //Log.d(TAG,"openBrowser.onLoginFailed()");
             }
 
             @Override
             public void onLoginTokenReceived(UmbrellaConnection login) {
+                //Log.d(TAG,"openBrowser.onLoginTokenReceived(...)");
                 Intent myIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url+"/user/edit?token="+token));
                 c.startActivity(myIntent);
             }
@@ -166,7 +167,7 @@ public class UmbrellaConnection {
         doLogin(new LoginListener() {
             @Override
             public void started() {
-
+                //Log.d(TAG,"fetchMessages.started()");
             }
 
             @Override
@@ -176,7 +177,10 @@ public class UmbrellaConnection {
 
             @Override
             public void onLoginResponse(String response) {
-                if (response.trim().startsWith("[{")) try {
+                //Log.d(TAG,"fetchMessages.onLoginResponse("+response+")");
+                if (response.trim().equals("[]")){
+                    messageHandler.gotNewMessages(0);
+                } else if (response.trim().startsWith("[{")) try {
                     JSONArray arr = new JSONArray(response);
                     int count = 0;
                     for (int i = 0; i<arr.length(); i++) {
@@ -194,16 +198,17 @@ public class UmbrellaConnection {
 
             @Override
             public void onLoginError() {
-
+                //Log.d(TAG,"fetchMessages.onLoginError()");
             }
 
             @Override
             public void onLoginFailed() {
-
+                //Log.d(TAG,"fetchMessages.onLoginFailed()");
             }
 
             @Override
             public void onLoginTokenReceived(UmbrellaConnection login) {
+                //Log.d(TAG,"fetchMessages.onLoginTokenReceived(login)");
                 Message lastMessage = MessageDB.lastMessage();
                 long id = lastMessage == null ? -1 : lastMessage.id();
                 login.get("/user/json?messages="+id,this);
