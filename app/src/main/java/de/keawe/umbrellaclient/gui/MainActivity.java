@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.LinearLayout;
 
@@ -34,7 +35,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void fetchNewMessages() {
-        //Log.d(TAG,"fetchNewMessages()");
+        Log.d(TAG,"fetchNewMessages()");
         findViewById(R.id.refresh_btn).setEnabled(false);
         new UmbrellaConnection(this).fetchMessages(new MessageHandler() {
             @Override

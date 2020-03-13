@@ -92,7 +92,7 @@ public class UmbrellaConnection {
 
             @Override
             public void onResponse(String response) {
-                //Log.d(TAG,"fetchMessages.onResponse("+response+")");
+                Log.d(TAG,"fetchMessages.onResponse("+response+")");
                 if (response.trim().equals("[]")) {
                     messageHandler.gotNewMessages(0);
                 } else if (response.trim().startsWith("[{")) try {
@@ -113,7 +113,7 @@ public class UmbrellaConnection {
 
             @Override
             public void onError() {
-                //Log.d(TAG,"fetchMessages.onError()");
+                Log.d(TAG,"fetchMessages.onError()");
                 messageHandler.onError();
             }
         });
